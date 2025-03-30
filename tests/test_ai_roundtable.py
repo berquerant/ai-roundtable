@@ -26,7 +26,7 @@ def test_e2e():
         [
             "pip",
             "install",
-            "dist/ai_roundtable-0.1.3.tar.gz",
+            "dist/ai_roundtable-0.1.4.tar.gz",
         ],
         pwd,
     )
