@@ -291,6 +291,9 @@ class Config(IntoDict, FromDict):
             self.__validate_message(x)
 
     def __validate_message(self, message: Message) -> None:
+        if message.speaker == Builtin.moderator_name():
+            # skip moderator
+            return
         pd = self.permission_dict
         sd = self.speaker_dict
         for x in message.permissions:

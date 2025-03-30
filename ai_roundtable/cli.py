@@ -24,9 +24,13 @@ def main() -> int:
         description="Discuss with multiple AIs",
         epilog=textwrap.dedent(
             """\
-            Example:
+            Examples:
+            # start discussion
             python -m ai_roundtable.cli --skeleton dual > dual.yml
             python -m ai_roundtable.cli -c dual.yml -a "Can AI be a friend to humans?"
+            # continue discussion
+            python -m ai_roundtable.cli -c dual.yml -a "Can AI be a friend to humans?" -o thread.yml
+            python -m ai_roundtable.cli -c dual.yml -t thread.yml
 
             Environment variables:
               OPENAI_API_KEY
