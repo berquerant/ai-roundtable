@@ -7,7 +7,7 @@ name = "ai_roundtable"
 description = "Discuss with multiple AIs"
 
 readme = "README.md"
-version = "0.1.0"
+version = "0.1.1"
 requires-python = ">=3.13"
 license = { file = "LICENSE" }
 classifiers = [

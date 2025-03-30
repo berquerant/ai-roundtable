@@ -9,6 +9,7 @@ from contextlib import contextmanager
 
 from .bot import Evaluator, EvaluatorFeedback
 from .config import ConfigYaml, Config, Message
+from .io import file_or
 from .log import debug, log, quiet
 from .mtg import Meeting
 from .rule import Rule
@@ -41,6 +42,8 @@ def main() -> int:
         help=textwrap.dedent(
             """\
             first message to give to AI, agenda.
+            @file_name to specify a file.
+            @- to read from stdin.
             if not specified and thread file exists, the first statement should be agenda"""
         ),
     )
@@ -130,7 +133,7 @@ def main() -> int:
     def agenda() -> str:
         if args.agenda:
             a: str = args.agenda
-            return a
+            return file_or(a)
         if args.instructions is not None:
             return "DUMMY AGENDA"
         if len(c.main_thread) == 0:
