@@ -137,7 +137,7 @@ def main() -> int:
 
     c = config()
 
-    def agenda() -> str:
+    def read_agenda() -> str:
         if args.agenda:
             a: str = args.agenda
             return file_or(a)
@@ -146,6 +146,8 @@ def main() -> int:
         if len(c.main_thread) == 0:
             raise Exception("no agenda!")
         return c.main_thread.messages[0].content
+
+    agenda = read_agenda()
 
     with out_stream(args.out) as out, out_stream(args.eval_out) as eval_out:
 
@@ -169,12 +171,12 @@ def main() -> int:
             end=args.user_input_end,
             evaluator=Evaluator(
                 main_thread=c.main_thread,
-                agenda=agenda(),
+                agenda=agenda,
                 latest_messages=args.eval_messages,
                 hook=evaluator_hook,
             ),
             skip_eval_turns=args.skip_eval,
-            agenda=agenda(),
+            agenda=agenda,
         )
         meeting.setup()
         if args.instructions is not None:
