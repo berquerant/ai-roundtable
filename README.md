@@ -14,7 +14,7 @@ options:
                         stdin. if not specified and thread file exists, the first statement should be agenda
   -m, --model MODEL     AI model, default: gpt-4o-mini
   -c, --config CONFIG   config file, default: config.yml
-  -t, --thread THREAD   thread file
+  -t, --thread THREAD   thread file, - means stdin
   -o, --out OUT         thread output, default: stdout
   -n, --max_turns MAX_TURNS
                         maximum number of statements, default: 8
@@ -33,9 +33,13 @@ options:
   --instructions INSTRUCTIONS
                         display instructions for n-th speaker (0 means the first speaker), needs config
 
-Example:
+Examples:
+# start discussion
 python -m ai_roundtable.cli --skeleton dual > dual.yml
 python -m ai_roundtable.cli -c dual.yml -a "Can AI be a friend to humans?"
+# continue discussion
+python -m ai_roundtable.cli -c dual.yml -a "Can AI be a friend to humans?" -o thread.yml
+python -m ai_roundtable.cli -c dual.yml -t thread.yml
 
 Environment variables:
   OPENAI_API_KEY
