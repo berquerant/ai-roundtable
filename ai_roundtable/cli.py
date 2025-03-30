@@ -53,7 +53,7 @@ def main() -> int:
     parser.add_argument(
         "-c", "--config", type=str, action="store", default="config.yml", help="config file, default: config.yml"
     )
-    parser.add_argument("-t", "--thread", type=str, action="store", help="thread file")
+    parser.add_argument("-t", "--thread", type=str, action="store", help="thread file, - means stdin")
     parser.add_argument("-o", "--out", type=str, action="store", help="thread output, default: stdout")
     parser.add_argument(
         "-n", "--max_turns", type=int, action="store", default=8, help="maximum number of statements, default: 8"
@@ -106,13 +106,16 @@ def main() -> int:
     def config() -> Config:
         with open(args.config) as f:
             config = f.read()
-        if args.thread is None:
-            thread = ""
-        elif os.path.isfile(args.thread):
-            with open(args.thread) as f:
-                thread = f.read()
-        else:
-            thread = ""
+        thread = ""
+        match args.thread:
+            case "-":
+                thread = sys.stdin.read()
+            case None:
+                thread = ""
+            case v:
+                if os.path.isfile(v):
+                    with open(v) as f:
+                        thread = f.read()
         return ConfigYaml(config=config, thread=thread).into_config()
 
     @contextmanager
@@ -174,9 +177,6 @@ def main() -> int:
             print(Rule(config=c).print_rules(c.speakers[args.instructions].name).describe())
             return 0
         meeting.start()
-    if args.thread is not None:
-        with open(args.thread, "w") as f:
-            print(ConfigYaml.from_config(c).thread, file=f)
     return 0
 
 
