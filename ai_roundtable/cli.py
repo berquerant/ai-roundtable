@@ -157,13 +157,13 @@ def main() -> int:
             log().info("message apppended id=%s", m.identity())
             obj = [m.into_dict()]
             s = yaml_dumps(obj)
-            print(s, file=out)
+            print(s, file=out, flush=True)
 
         def evaluator_hook(e: EvaluatorFeedback) -> None:
             log().info("evaluation appended decision=%s", e.decision)
             obj = [e.into_dict()]
             s = yaml_dumps(obj)
-            print(s, file=eval_out)
+            print(s, file=eval_out, flush=True)
 
         c.main_thread.set_append_hook(message_append_hook)
         meeting = Meeting(
