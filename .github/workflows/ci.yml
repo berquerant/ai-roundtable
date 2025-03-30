@@ -1,0 +1,32 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Set up Python
+        uses: actions/setup-python@v5.4.0
+        with:
+          python-version: "3.13"
+          cache: "pipenv"
+      - name: Install pipenv
+        run: pip install pipenv
+      - name: Sync
+        run: pipenv sync --dev
+      - name: Test
+        run: make ci
+      - name: Vuln
+        run: make vuln

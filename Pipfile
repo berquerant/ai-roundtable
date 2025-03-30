@@ -1,0 +1,28 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pyyaml = "*"
+openai-agents = "*"
+
+[dev-packages]
+setuptools = "*"
+pytest = "*"
+black = "*"
+tox = "*"
+mypy = "*"
+ruff = "*"
+types-pyyaml = "*"
+
+[requires]
+python_version = "3.13"
+
+[scripts]
+check = "tox run-parallel -m check --parallel-no-spinner --parallel-live"
+test = "tox run-parallel -m test --parallel-no-spinner --parallel-live"
+ci = "tox run-parallel -m ci --parallel-no-spinner --parallel-live"
+dev = "pip install --editable ."
+install = "pip install ."
+dist = "python setup.py sdist"
