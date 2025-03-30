@@ -737,11 +737,11 @@
         },
         "platformdirs": {
             "hashes": [
-                "sha256:357fb2acbc885b0419afd3ce3ed34564c13c9b95c89360cd9563f73aa5e2b907",
-                "sha256:73e575e1408ab8103900836b97580d5307456908a03e92031bab39e4554cc3fb"
+                "sha256:a03875334331946f13c549dbd8f4bac7a13a50a895a0eb1e8c6a8ace80d40a94",
+                "sha256:eb437d586b6a0986388f0d6f74aa0cde27b48d0e3d66843640bfb6bdcdb6e351"
             ],
-            "markers": "python_version >= '3.8'",
-            "version": "==4.3.6"
+            "markers": "python_version >= '3.9'",
+            "version": "==4.3.7"
         },
         "pluggy": {
             "hashes": [
@@ -804,12 +804,12 @@
         },
         "tox": {
             "hashes": [
-                "sha256:92e8290e76ad4e15748860a205865696409a2d014eedeb796a34a0f3b5e7336e",
-                "sha256:d5948b350f76fae436d6545a5e87c2b676ab7a0d7d88c1308651245eadbe8aea"
+                "sha256:4dfdc7ba2cc6fdc6688dde1b21e7b46ff6c41795fb54586c91a3533317b5255c",
+                "sha256:dd67f030317b80722cf52b246ff42aafd3ed27ddf331c415612d084304cf5e52"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.8'",
-            "version": "==4.24.2"
+            "version": "==4.25.0"
         },
         "types-pyyaml": {
             "hashes": [
