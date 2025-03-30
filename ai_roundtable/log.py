@@ -23,9 +23,9 @@ def __init() -> None:
     global __logger, __debug
     logging.basicConfig(
         format="%(asctime)s %(levelname)s %(message)s",
+        stream=sys.stderr,
     )
     __logger = logging.getLogger(__name__)
-    __logger.addHandler(logging.StreamHandler(sys.stderr))
     __logger.setLevel(__level())
 
 
