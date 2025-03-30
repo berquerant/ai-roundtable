@@ -97,6 +97,8 @@ def main() -> int:
     if args.quiet:
         quiet()
 
+    log().debug("start ai-roundtable")
+
     if args.skeleton:
         match args.skeleton:
             case "minimal":
