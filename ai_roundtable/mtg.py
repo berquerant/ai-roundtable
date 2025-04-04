@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from agents import ModelProvider
+
 from .bot import Bot, Human, BotProto, Evaluator
 from .config import Config, Speaker, Builtin
 from .log import log
@@ -15,6 +17,7 @@ class Meeting:
     evaluator: Evaluator
     skip_eval_turns: int
     agenda: str
+    model_provider: ModelProvider
 
     @property
     def config(self) -> Config:
@@ -42,6 +45,7 @@ class Meeting:
             permission_dict=self.config.permission_dict,
             model=self.model,
             instructions=self.rule.print_rules(speaker.name).describe(),
+            model_provider=self.model_provider,
         )
 
     def __speaker(self, turn: int) -> Speaker:

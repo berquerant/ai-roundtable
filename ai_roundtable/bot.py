@@ -2,7 +2,7 @@ import textwrap
 from dataclasses import dataclass, make_dataclass, asdict
 from typing import Literal, Protocol, Callable, cast
 
-from agents import Agent, Runner, TResponseInputItem
+from agents import Agent, Runner, TResponseInputItem, ModelProvider, RunConfig
 
 from .config import MainThread, Speaker, RoleDict, PermissionDict, Thread
 from .data import Dict
@@ -50,6 +50,7 @@ class Bot:
     speaker: Speaker
     role_dict: RoleDict
     permission_dict: PermissionDict
+    model_provider: ModelProvider
 
     def __new_message(self, speaker: str, content: str) -> Message:
         if self.speaker.name == speaker:
@@ -80,7 +81,11 @@ class Bot:
         log().info("%s: begin reply", self.speaker.name)
         output_type = self.__output_type
         agent = Agent(name="assistant", instructions=self.instructions, output_type=output_type)
-        result = Runner.run_sync(starting_agent=agent, input=[x.into_item() for x in self.__messages]).final_output
+        result = Runner.run_sync(
+            starting_agent=agent,
+            input=[x.into_item() for x in self.__messages],
+            run_config=RunConfig(model_provider=self.model_provider),
+        ).final_output
         result_role: str = result.role
         result_content: str = result.content
         permissions = self.role_dict.get_or_raise(result_role, Exception(f"role {result.role} not found")).permissions
@@ -136,6 +141,7 @@ class Evaluator:
     agenda: str
     latest_messages: int
     hook: Callable[[EvaluatorFeedback], None]
+    model_provider: ModelProvider
 
     def evaluate(self) -> EvaluatorFeedback:
         """Decide whether to continue or end the discussion."""
@@ -146,7 +152,9 @@ class Evaluator:
             output_type=EvaluatorFeedback,
         )
         result: EvaluatorFeedback = Runner.run_sync(
-            starting_agent=agent, input=[x.into_item() for x in self.__messages]
+            starting_agent=agent,
+            input=[x.into_item() for x in self.__messages],
+            run_config=RunConfig(model_provider=self.model_provider),
         ).final_output
         self.hook(result)
         log().info("evaluator: end")

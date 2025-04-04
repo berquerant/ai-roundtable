@@ -12,6 +12,7 @@ from .config import ConfigYaml, Config, Message
 from .io import file_or
 from .log import debug, log, quiet
 from .mtg import Meeting
+from .provider import Setting
 from .rule import Rule
 from .skeleton import Skeleton
 from .yamlx import dumps as yaml_dumps
@@ -53,6 +54,13 @@ def main() -> int:
     )
     parser.add_argument(
         "-m", "--model", type=str, action="store", default="gpt-4o-mini", help="AI model, default: gpt-4o-mini"
+    )
+    parser.add_argument(
+        "-u",
+        "--base_url",
+        type=str,
+        action="store",
+        help="base url of API",
     )
     parser.add_argument(
         "-c", "--config", type=str, action="store", default="config.yml", help="config file, default: config.yml"
@@ -108,6 +116,10 @@ def main() -> int:
             case "full":
                 print(Skeleton.full())
         return 0
+
+    provider_setting = Setting(
+        model_name=args.model, base_url=args.base_url, api_key=os.getenv("OPENAPI_API_KEY") or ""
+    )
 
     def config() -> Config:
         with open(args.config) as f:
@@ -176,9 +188,11 @@ def main() -> int:
                 agenda=agenda,
                 latest_messages=args.eval_messages,
                 hook=evaluator_hook,
+                model_provider=provider_setting.provider,
             ),
             skip_eval_turns=args.skip_eval,
             agenda=agenda,
+            model_provider=provider_setting.provider,
         )
         meeting.setup()
         if args.instructions is not None:
