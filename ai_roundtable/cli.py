@@ -34,7 +34,7 @@ def main() -> int:
 
             Environment variables:
               OPENAI_API_KEY
-                required, API key from OpneAI project
+                required, API key from OpenAI project
         """
         ),
     )

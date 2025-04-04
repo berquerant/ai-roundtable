@@ -43,5 +43,5 @@ python -m ai_roundtable.cli -c dual.yml -t thread.yml
 
 Environment variables:
   OPENAI_API_KEY
-    required, API key from OpneAI project
+    required, API key from OpenAI project
 ```
