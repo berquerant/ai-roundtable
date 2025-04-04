@@ -2,17 +2,17 @@
 
 ``` shell
 ❯ python -m ai_roundtable.cli -h
-usage: cli.py [-h] [-a AGENDA] [-m MODEL] [-c CONFIG] [-t THREAD] [-o OUT] [-n MAX_TURNS]
-              [--eval_messages EVAL_MESSAGES] [-e EVAL_OUT] [-s SKIP_EVAL] [--user_input_end USER_INPUT_END]
+usage: cli.py [-h] [-a AGENDA] [-m MODEL] [-u BASE_URL] [-c CONFIG] [-t THREAD] [-o OUT] [-n MAX_TURNS] [--eval_messages EVAL_MESSAGES] [-e EVAL_OUT] [-s SKIP_EVAL] [--user_input_end USER_INPUT_END]
               [--debug] [--quiet] [--skeleton {minimal,dual,full}] [--instructions INSTRUCTIONS]
 
 Discuss with multiple AIs
 
 options:
   -h, --help            show this help message and exit
-  -a, --agenda AGENDA   first message to give to AI, agenda. @file_name to specify a file. @- to read from
-                        stdin. if not specified and thread file exists, the first statement should be agenda
+  -a, --agenda AGENDA   first message to give to AI, agenda. @file_name to specify a file. @- to read from stdin. if not specified and thread file exists, the first statement should be agenda
   -m, --model MODEL     AI model, default: gpt-4o-mini
+  -u, --base_url BASE_URL
+                        base url of API
   -c, --config CONFIG   config file, default: config.yml
   -t, --thread THREAD   thread file, - means stdin
   -o, --out OUT         thread output, default: stdout
@@ -40,6 +40,9 @@ python -m ai_roundtable.cli -c dual.yml -a "Can AI be a friend to humans?"
 # continue discussion
 python -m ai_roundtable.cli -c dual.yml -a "Can AI be a friend to humans?" -o thread.yml
 python -m ai_roundtable.cli -c dual.yml -t thread.yml
+# custom model provider
+python -m ai_roundtable.cli -c dual.yml -a "Can AI be a friend to humans?" \
+  -u "http://localhost:11434/v1" -m "gemma3"
 
 Environment variables:
   OPENAI_API_KEY

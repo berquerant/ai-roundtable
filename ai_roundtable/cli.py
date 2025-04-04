@@ -32,6 +32,9 @@ def main() -> int:
             # continue discussion
             python -m ai_roundtable.cli -c dual.yml -a "Can AI be a friend to humans?" -o thread.yml
             python -m ai_roundtable.cli -c dual.yml -t thread.yml
+            # custom model provider
+            python -m ai_roundtable.cli -c dual.yml -a "Can AI be a friend to humans?" \\
+              -u "http://localhost:11434/v1" -m "gemma3"
 
             Environment variables:
               OPENAI_API_KEY
