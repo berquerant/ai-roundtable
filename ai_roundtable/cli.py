@@ -120,9 +120,7 @@ def main() -> int:
                 print(Skeleton.full())
         return 0
 
-    provider_setting = Setting(
-        model_name=args.model, base_url=args.base_url, api_key=os.getenv("OPENAPI_API_KEY") or ""
-    )
+    provider_setting = Setting(model_name=args.model, base_url=args.base_url, api_key=os.getenv("OPENAI_API_KEY") or "")
 
     def config() -> Config:
         with open(args.config) as f:
