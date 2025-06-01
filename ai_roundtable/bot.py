@@ -108,6 +108,10 @@ class Human:
         log().info("%s: begin reply", self.speaker.name)
         choices = ", ".join(self.speaker.write_roles)
         while True:
+            if len(self.speaker.write_roles) == 1:
+                role = list(self.speaker.write_roles)[0]
+                log().info("%s: use role: %s", self.speaker.name, role)
+                break
             role = input(f"ROLE({choices})> ")
             if role not in self.speaker.write_roles:
                 log().warn("%s: role %s is not allowed", self.speaker.name, role)
