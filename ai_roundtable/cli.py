@@ -4,12 +4,10 @@ import argparse
 import os
 import sys
 import textwrap
-import typing
-from contextlib import contextmanager
 
 from .bot import Evaluator, EvaluatorFeedback
 from .config import ConfigYaml, Config, Message
-from .io import file_or
+from .io import file_or, Writer
 from .log import debug, log, quiet
 from .mtg import Meeting
 from .provider import Setting
@@ -137,18 +135,10 @@ def main() -> int:
                         thread = f.read()
         return ConfigYaml(config=config, thread=thread).into_config()
 
-    @contextmanager
-    def out_stream(
-        dest: str | None, default: typing.IO[str] = sys.stdout
-    ) -> typing.Generator[typing.IO[str], None, None]:
+    def out_stream(dest: str | None) -> Writer:
         if dest is None:
-            yield default
-            return
-        try:
-            f = open(dest, "a")
-            yield f
-        finally:
-            f.close()
+            return Writer.stdout()
+        return Writer.new(dest)
 
     c = config()
 
@@ -163,43 +153,44 @@ def main() -> int:
         return c.main_thread.messages[0].content
 
     agenda = read_agenda()
+    out = out_stream(args.out)
+    eval_out = out_stream(args.eval_out)
 
-    with out_stream(args.out) as out, out_stream(args.eval_out) as eval_out:
+    def message_append_hook(m: Message) -> None:
+        log().info("message apppended id=%s", m.identity())
+        obj = [m.into_dict()]
+        s = yaml_dumps(obj)
+        out.write(s)
 
-        def message_append_hook(m: Message) -> None:
-            log().info("message apppended id=%s", m.identity())
-            obj = [m.into_dict()]
-            s = yaml_dumps(obj)
-            print(s, file=out, flush=True)
+    def evaluator_hook(e: EvaluatorFeedback) -> None:
+        log().info("evaluation appended decision=%s", e.decision)
+        obj = [e.into_dict()]
+        s = yaml_dumps(obj)
+        eval_out.write(s)
 
-        def evaluator_hook(e: EvaluatorFeedback) -> None:
-            log().info("evaluation appended decision=%s", e.decision)
-            obj = [e.into_dict()]
-            s = yaml_dumps(obj)
-            print(s, file=eval_out, flush=True)
-
-        c.main_thread.set_append_hook(message_append_hook)
-        meeting = Meeting(
-            rule=Rule(config=c),
-            model=args.model,
-            max_turns=args.max_turns,
-            end=args.user_input_end,
-            evaluator=Evaluator(
-                main_thread=c.main_thread,
-                agenda=agenda,
-                latest_messages=args.eval_messages,
-                hook=evaluator_hook,
-                model_provider=provider_setting.provider,
-            ),
-            skip_eval_turns=args.skip_eval,
+    c.main_thread.set_append_hook(message_append_hook)
+    meeting = Meeting(
+        rule=Rule(config=c),
+        model=args.model,
+        max_turns=args.max_turns,
+        end=args.user_input_end,
+        evaluator=Evaluator(
+            main_thread=c.main_thread,
             agenda=agenda,
+            latest_messages=args.eval_messages,
+            hook=evaluator_hook,
             model_provider=provider_setting.provider,
-        )
-        meeting.setup()
-        if args.instructions is not None:
-            print(Rule(config=c).print_rules(c.speakers[args.instructions].name).describe())
-            return 0
-        meeting.start()
+        ),
+        skip_eval_turns=args.skip_eval,
+        agenda=agenda,
+        model_provider=provider_setting.provider,
+    )
+    meeting.setup()
+    if args.instructions is not None:
+        print(Rule(config=c).print_rules(c.speakers[args.instructions].name).describe())
+        return 0
+    meeting.start()
+
     return 0
 
 
