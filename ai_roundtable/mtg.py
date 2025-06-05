@@ -67,20 +67,20 @@ class Meeting:
             return True
         return False
 
-    def __evaluate(self, turn: int) -> bool:
+    async def __evaluate(self, turn: int) -> bool:
         if self.__skip(turn):
             return False
         log().info("turn: %d, evaluate", turn)
-        r = self.evaluator.evaluate()
+        r = await self.evaluator.evaluate()
         return r.decision == "end"
 
-    def start(self) -> None:
+    async def start(self) -> None:
         log().info("meeting start")
         for turn in range(1, self.max_turns + 1):
             s = self.__speaker(turn)
             log().info("turn: %d, speaker: %s", turn, s.name)
-            self.new_bot(s).reply()
-            if self.__evaluate(turn):
+            await self.new_bot(s).reply()
+            if await self.__evaluate(turn):
                 log().info("meeting end due to evaluation")
                 return
         log().info("meeting end due to max_turns: %d", self.max_turns)

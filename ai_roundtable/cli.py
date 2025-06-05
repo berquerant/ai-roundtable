@@ -8,7 +8,7 @@ import textwrap
 from .bot import Evaluator, EvaluatorFeedback
 from .config import ConfigYaml, Config, Message
 from .io import file_or, Writer
-from .log import debug, log, quiet
+from .log import debug, log, quiet, stream
 from .mtg import Meeting
 from .provider import Setting
 from .rule import Rule
@@ -16,7 +16,7 @@ from .skeleton import Skeleton
 from .yamlx import dumps as yaml_dumps
 
 
-def main() -> int:
+async def main() -> int:
     """Entry point of CLI."""
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -68,6 +68,7 @@ def main() -> int:
     )
     parser.add_argument("-t", "--thread", type=str, action="store", help="thread file, - means stdin")
     parser.add_argument("-o", "--out", type=str, action="store", help="thread output, default: stdout")
+    parser.add_argument("--disable_stream", action="store_true", help="disable message streaming to stdout")
     parser.add_argument(
         "-n", "--max_turns", type=int, action="store", default=8, help="maximum number of statements, default: 8"
     )
@@ -105,6 +106,8 @@ def main() -> int:
         debug()
     if args.quiet:
         quiet()
+    if not args.disable_stream:
+        stream()
 
     log().debug("start ai-roundtable")
 
@@ -189,12 +192,13 @@ def main() -> int:
     if args.instructions is not None:
         print(Rule(config=c).print_rules(c.speakers[args.instructions].name).describe())
         return 0
-    meeting.start()
+    await meeting.start()
 
     return 0
 
 
 if __name__ == "__main__":
     import sys
+    import asyncio
 
-    sys.exit(main())
+    sys.exit(asyncio.run(main()))

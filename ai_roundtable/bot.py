@@ -3,12 +3,13 @@ from dataclasses import dataclass, make_dataclass, asdict
 from typing import Literal, Protocol, Callable, cast
 
 from agents import Agent, Runner, TResponseInputItem, ModelProvider, RunConfig
+from openai.types.responses import ResponseTextDeltaEvent
 
 from .config import MainThread, Speaker, RoleDict, PermissionDict, Thread
 from .data import Dict
 from .desc import Section
 from .io import read_user_input
-from .log import log
+from .log import log, stream_log
 from .yamlx import dumps as yaml_dumps
 
 
@@ -37,7 +38,7 @@ class Message:
 class BotProto(Protocol):
     """Chat bot protocol."""
 
-    def reply(self) -> None: ...
+    async def reply(self) -> None: ...
 
 
 @dataclass
@@ -76,19 +77,24 @@ class Bot:
             ],
         )
 
-    def reply(self) -> None:
+    async def reply(self) -> None:
         """Append a reply to the main thread."""
         log().info("%s: begin reply", self.speaker.name)
         output_type = self.__output_type
         agent = Agent(name="assistant", instructions=self.instructions, output_type=output_type)
-        result = Runner.run_sync(
+        result = Runner.run_streamed(
             starting_agent=agent,
             input=[x.into_item() for x in self.__messages],
             run_config=RunConfig(model_provider=self.model_provider),
-        ).final_output
-        result_role: str = result.role
-        result_content: str = result.content
-        permissions = self.role_dict.get_or_raise(result_role, Exception(f"role {result.role} not found")).permissions
+        )
+        async for event in result.stream_events():
+            if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+                msg = event.data.delta
+                stream_log(msg)
+        final_output = result.final_output
+        result_role: str = final_output.role
+        result_content: str = final_output.content
+        permissions = self.role_dict.get_or_raise(result_role, Exception(f"role {result_role} not found")).permissions
         self.main_thread.append(self.speaker.name, permissions, result_content)
         log().info("%s: end reply", self.speaker.name)
 
@@ -103,7 +109,7 @@ class Human:
     permission_dict: PermissionDict
     end: str
 
-    def reply(self) -> None:
+    async def reply(self) -> None:
         """Append a reply to the main thread."""
         log().info("%s: begin reply", self.speaker.name)
         choices = ", ".join(self.speaker.write_roles)
@@ -147,7 +153,7 @@ class Evaluator:
     hook: Callable[[EvaluatorFeedback], None]
     model_provider: ModelProvider
 
-    def evaluate(self) -> EvaluatorFeedback:
+    async def evaluate(self) -> EvaluatorFeedback:
         """Decide whether to continue or end the discussion."""
         log().info("evaluator: begin")
         agent = Agent(
@@ -155,14 +161,19 @@ class Evaluator:
             instructions=self.__description.describe(),
             output_type=EvaluatorFeedback,
         )
-        result: EvaluatorFeedback = Runner.run_sync(
+        result = Runner.run_streamed(
             starting_agent=agent,
             input=[x.into_item() for x in self.__messages],
             run_config=RunConfig(model_provider=self.model_provider),
-        ).final_output
-        self.hook(result)
+        )
+        async for event in result.stream_events():
+            if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+                msg = event.data.delta
+                stream_log(msg)
+        final_output: EvaluatorFeedback = result.final_output
+        self.hook(final_output)
         log().info("evaluator: end")
-        return result
+        return final_output
 
     @property
     def __messages(self) -> list[Message]:
