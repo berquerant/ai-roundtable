@@ -51,3 +51,17 @@ def quiet() -> None:
 def log() -> logging.Logger:
     """Return the logger instance."""
     return __get()
+
+
+__stream: bool = False
+
+
+def stream() -> None:
+    """Enable stream output."""
+    global __stream
+    __stream = True
+
+
+def stream_log(msg: str) -> None:
+    """Print streaming log."""
+    print(msg, flush=True, end="")

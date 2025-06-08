@@ -10,6 +10,10 @@ class Writer:
     dest: str
 
     @classmethod
+    def null(cls) -> typing.Self:
+        return cls(dest="null")
+
+    @classmethod
     def stdout(cls) -> typing.Self:
         return cls(dest="stdout")
 
@@ -24,6 +28,8 @@ class Writer:
     def write(self, msg: str) -> None:
         """Write msg to dest."""
         match self.dest:
+            case "null":
+                pass
             case "stdout":
                 print(msg, file=sys.stdout, flush=True)
             case "stderr":

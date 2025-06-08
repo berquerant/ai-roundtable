@@ -1,15 +1,15 @@
 import textwrap
-from dataclasses import dataclass, make_dataclass, asdict
-from typing import Literal, Protocol, Callable, cast
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Protocol, Callable, cast, TypeVar, Generic, override
 
-from agents import Agent, Runner, TResponseInputItem, ModelProvider, RunConfig
+from agents import Agent, Runner, TResponseInputItem, ModelProvider, RunConfig, RunResultStreaming
+from openai.types.responses import ResponseTextDeltaEvent
 
-from .config import MainThread, Speaker, RoleDict, PermissionDict, Thread
-from .data import Dict
+from .config import MainThread, Speaker, Thread
 from .desc import Section
 from .io import read_user_input
-from .log import log
-from .yamlx import dumps as yaml_dumps
+from .log import log, stream_log
 
 
 @dataclass
@@ -37,7 +37,16 @@ class Message:
 class BotProto(Protocol):
     """Chat bot protocol."""
 
-    def reply(self) -> None: ...
+    async def reply(self) -> None: ...
+
+
+async def streaming(result: RunResultStreaming) -> None:
+    """Print stream_log."""
+    async for event in result.stream_events():
+        if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+            msg = event.data.delta
+            stream_log(msg)
+    stream_log("\n")
 
 
 @dataclass
@@ -48,8 +57,6 @@ class Bot:
     instructions: str
     main_thread: MainThread
     speaker: Speaker
-    role_dict: RoleDict
-    permission_dict: PermissionDict
     model_provider: ModelProvider
 
     def __new_message(self, speaker: str, content: str) -> Message:
@@ -59,37 +66,27 @@ class Bot:
 
     @property
     def __thread(self) -> Thread:
-        return self.speaker.read_messages(self.main_thread, self.role_dict, self.permission_dict)
+        return self.main_thread
 
     @property
     def __messages(self) -> list[Message]:
-        return [self.__new_message(x.speaker, yaml_dumps(x.into_dict())) for x in self.__thread.messages]
+        return [self.__new_message(x.speaker, x.into_str()) for x in self.__thread.messages]
 
-    @property
-    def __output_type(self) -> type:
-        s = self.speaker
-        return make_dataclass(
-            f"Feedback_{s.name}",
-            [
-                ("content", str),
-                ("role", Literal[tuple(s.write_roles)]),
-            ],
-        )
-
-    def reply(self) -> None:
+    async def reply(self) -> None:
         """Append a reply to the main thread."""
         log().info("%s: begin reply", self.speaker.name)
-        output_type = self.__output_type
-        agent = Agent(name="assistant", instructions=self.instructions, output_type=output_type)
-        result = Runner.run_sync(
+        agent = Agent(name="assistant", instructions=self.instructions)
+        messages = self.__messages
+        for i, x in enumerate(messages):
+            log().debug("input[%s][%d][%s]: %s", self.speaker.name, i, x.role, x.content)
+        result = Runner.run_streamed(
             starting_agent=agent,
-            input=[x.into_item() for x in self.__messages],
+            input=[x.into_item() for x in messages],
             run_config=RunConfig(model_provider=self.model_provider),
-        ).final_output
-        result_role: str = result.role
-        result_content: str = result.content
-        permissions = self.role_dict.get_or_raise(result_role, Exception(f"role {result.role} not found")).permissions
-        self.main_thread.append(self.speaker.name, permissions, result_content)
+        )
+        await streaming(result)
+        final_output: str = result.final_output
+        self.main_thread.append(self.speaker.name, final_output)
         log().info("%s: end reply", self.speaker.name)
 
 
@@ -99,88 +96,91 @@ class Human:
 
     main_thread: MainThread
     speaker: Speaker
-    role_dict: RoleDict
-    permission_dict: PermissionDict
     end: str
 
-    def reply(self) -> None:
+    async def reply(self) -> None:
         """Append a reply to the main thread."""
-        log().info("%s: begin reply", self.speaker.name)
-        choices = ", ".join(self.speaker.write_roles)
-        while True:
-            if len(self.speaker.write_roles) == 1:
-                role = list(self.speaker.write_roles)[0]
-                log().info("%s: use role: %s", self.speaker.name, role)
-                break
-            role = input(f"ROLE({choices})> ")
-            if role not in self.speaker.write_roles:
-                log().warn("%s: role %s is not allowed", self.speaker.name, role)
-                continue
-            break
-        permissions = self.role_dict.get_or_raise(role, Exception(f"role {role} not found")).permissions
+        log().info("%s: begin reply (human)", self.speaker.name)
         log().info("%s: content(end=%s)> ", self.speaker.name, self.end)
         content = "\n".join(read_user_input(self.end))
-        self.main_thread.append(self.speaker.name, permissions, content)
-        log().info("%s: end reply", self.speaker.name)
+        self.main_thread.append(self.speaker.name, content)
+        log().info("%s: end reply (human)", self.speaker.name)
+
+
+ET = TypeVar("ET")
 
 
 @dataclass
-class EvaluatorFeedback:
-    """Result of Evaluation."""
-
-    summary_of_discussion: str
-    reason_for_decision: str
-    decision: Literal["continue", "end"]
-
-    def into_dict(self) -> Dict:
-        """Convert into dict."""
-        return asdict(self)
-
-
-@dataclass
-class Evaluator:
+class Evaluator(ABC, Generic[ET]):
     """Evaluate the main thread."""
 
+    name: str
     main_thread: MainThread
-    agenda: str
     latest_messages: int
-    hook: Callable[[EvaluatorFeedback], None]
     model_provider: ModelProvider
+    hook: Callable[[ET], None]
+    agenda: str
+    language: str
 
-    def evaluate(self) -> EvaluatorFeedback:
-        """Decide whether to continue or end the discussion."""
-        log().info("evaluator: begin")
-        agent = Agent(
-            name="evaluator",
-            instructions=self.__description.describe(),
-            output_type=EvaluatorFeedback,
-        )
-        result: EvaluatorFeedback = Runner.run_sync(
-            starting_agent=agent,
-            input=[x.into_item() for x in self.__messages],
-            run_config=RunConfig(model_provider=self.model_provider),
-        ).final_output
-        self.hook(result)
-        log().info("evaluator: end")
-        return result
+    @abstractmethod
+    def parse_output(self, output: str) -> ET: ...
+
+    @abstractmethod
+    def description(self) -> Section: ...
 
     @property
     def __messages(self) -> list[Message]:
-        return [
-            Message(
-                role="user",
-                content=textwrap.dedent(
-                    """\
-                    speaker: {speaker}
-                    content:
-                    {content}"""
-                ).format(speaker=x.speaker, content=x.content),
-            )
-            for x in self.main_thread.messages[-self.latest_messages :]
-        ]
+        return [Message.user(x.into_str()) for x in self.main_thread.latest(self.latest_messages).messages]
 
-    @property
-    def __description(self) -> Section:
+    async def evaluate(self) -> ET:
+        log().info("evaluator[%s]: begin", self.name)
+        agent = Agent(
+            name=f"evaluator[{self.name}]",
+            instructions=self.description().describe(),
+        )
+        messages = self.__messages
+        for i, x in enumerate(messages):
+            log().debug("input[%s][%d][%s]: %s", self.name, i, x.role, x.content)
+        result = Runner.run_streamed(
+            starting_agent=agent,
+            input=[x.into_item() for x in messages],
+            run_config=RunConfig(model_provider=self.model_provider),
+        )
+        await streaming(result)
+        final_output: str = result.final_output
+        ret = self.parse_output(final_output)
+        self.hook(ret)
+        log().info("evaluator[%s]: end", self.name)
+        return ret
+
+
+class SummaryEvaluator(Evaluator[str]):
+    """Summarize the main thread."""
+
+    @override
+    def parse_output(self, output: str) -> str:
+        return output
+
+    @override
+    def description(self) -> Section:
+        return Section(
+            heading="Summary",
+            content=textwrap.dedent(
+                """\
+                Provide summary of input text concisely and comprehensively in {language}.""",
+            ).format(language=self.language),
+        )
+
+
+class EndEvaluator(Evaluator[bool]):
+    """Evaluate the main thread."""
+
+    @override
+    def parse_output(self, output: str) -> bool:
+        return "yes" in output
+
+    @override
+    def description(self) -> Section:
         return Section(
             heading="When to Stop Discussing",
             content=textwrap.dedent(
@@ -194,7 +194,7 @@ class Evaluator:
                 - Similar opinions are being repeated.
 
                 When deciding whether to continue or end the discussion,
-                please provide feedback on why you are making that decision and a summary of the discussion so far.
+                only reply "yes" to end the discussion, or "no" if not.
                 The agenda item is {agenda}.""",
             ).format(agenda=self.agenda),
         )
