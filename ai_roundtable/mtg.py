@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from agents import ModelProvider
 
 from .bot import Bot, Human, BotProto, Evaluator
-from .config import Config, Speaker, Builtin
+from .config import Config, Speaker
 from .log import log
 from .rule import Rule
 
@@ -14,10 +14,12 @@ class Meeting:
     max_turns: int
     rule: Rule
     end: str
-    evaluator: Evaluator
+    end_evaluator: Evaluator[bool]
+    summary_evaluator: Evaluator[str]
     skip_eval_turns: int
-    agenda: str
     model_provider: ModelProvider
+    language: str
+    agenda: str
 
     @property
     def config(self) -> Config:
@@ -25,26 +27,21 @@ class Meeting:
 
     def setup(self) -> None:
         self.config.setup()
-        if len(self.config.main_thread) == 0:
-            log().info("generate introduction messages")
-            self.config.main_thread.append(Builtin.moderator_name(), Builtin.public_role().permissions, self.agenda)
 
     def new_bot(self, speaker: Speaker) -> BotProto:
         if speaker.human:
             return Human(
                 main_thread=self.config.main_thread,
                 speaker=speaker,
-                role_dict=self.config.role_dict,
-                permission_dict=self.config.permission_dict,
                 end=self.end,
             )
         return Bot(
             main_thread=self.config.main_thread,
             speaker=speaker,
-            role_dict=self.config.role_dict,
-            permission_dict=self.config.permission_dict,
             model=self.model,
-            instructions=self.rule.print_rules(speaker.name).describe(),
+            instructions=self.rule.print_rules(
+                speaker=speaker.name, language=self.language, agenda=self.agenda
+            ).describe(),
             model_provider=self.model_provider,
         )
 
@@ -71,8 +68,7 @@ class Meeting:
         if self.__skip(turn):
             return False
         log().info("turn: %d, evaluate", turn)
-        r = await self.evaluator.evaluate()
-        return r.decision == "end"
+        return await self.end_evaluator.evaluate()
 
     async def start(self) -> None:
         log().info("meeting start")
@@ -81,6 +77,7 @@ class Meeting:
             log().info("turn: %d, speaker: %s", turn, s.name)
             await self.new_bot(s).reply()
             if await self.__evaluate(turn):
-                log().info("meeting end due to evaluation")
+                log().info("meeting end due to end evaluation")
+                await self.summary_evaluator.evaluate()
                 return
         log().info("meeting end due to max_turns: %d", self.max_turns)

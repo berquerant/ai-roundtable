@@ -2,8 +2,8 @@
 
 ``` shell
 ❯ python -m ai_roundtable.cli -h
-usage: cli.py [-h] [-a AGENDA] [-m MODEL] [-u BASE_URL] [-c CONFIG] [-t THREAD] [-o OUT] [-n MAX_TURNS] [--eval_messages EVAL_MESSAGES] [-e EVAL_OUT] [-s SKIP_EVAL] [--user_input_end USER_INPUT_END]
-              [--debug] [--quiet] [--skeleton {minimal,dual,full}] [--instructions INSTRUCTIONS]
+usage: cli.py [-h] [-a AGENDA] [-m MODEL] [-u BASE_URL] [-c CONFIG] [-t THREAD] [-o OUT] [--disable_stream] [-n MAX_TURNS] [--eval_messages EVAL_MESSAGES] [-e EVAL_OUT] [-s SKIP_EVAL]
+              [--user_input_end USER_INPUT_END] [--debug] [--quiet] [--skeleton {minimal,dual,full}] [--instructions INSTRUCTIONS] [-l LANGUAGE]
 
 Discuss with multiple AIs
 
@@ -15,13 +15,14 @@ options:
                         base url of API
   -c, --config CONFIG   config file, default: config.yml
   -t, --thread THREAD   thread file, - means stdin
-  -o, --out OUT         thread output, default: stdout
+  -o, --out OUT         thread output, default: null
+  --disable_stream      disable message streaming to stdout
   -n, --max_turns MAX_TURNS
-                        maximum number of statements, default: 8
+                        maximum number of statements, default: 16
   --eval_messages EVAL_MESSAGES
                         maximum number of statements to go back for evaluation, default: 5
   -e, --eval_out EVAL_OUT
-                        evaluation output, default: stdout
+                        evaluation output, default: null
   -s, --skip_eval SKIP_EVAL
                         turns skip evaluation, negative value means never evaluate, default: 0
   --user_input_end USER_INPUT_END
@@ -32,6 +33,8 @@ options:
                         display config skeleton
   --instructions INSTRUCTIONS
                         display instructions for n-th speaker (0 means the first speaker), needs config
+  -l, --language LANGUAGE
+                        preferred language
 
 Examples:
 # start discussion

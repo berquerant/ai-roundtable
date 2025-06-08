@@ -63,4 +63,5 @@ def stream() -> None:
 
 
 def stream_log(msg: str) -> None:
+    """Print streaming log."""
     print(msg, flush=True, end="")

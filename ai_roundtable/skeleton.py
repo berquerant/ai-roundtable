@@ -1,6 +1,6 @@
 import textwrap
 
-from .config import Config, Role, Permission, ConfigYaml, Speaker, MainThread
+from .config import Config, ConfigYaml, Speaker, MainThread
 
 
 class Skeleton:
@@ -37,24 +37,14 @@ class Skeleton:
     def full() -> str:
         """Return a full example of ConfigYaml."""
         c = Config(
-            permissions=[
-                Permission(name="dovish"),
-            ],
-            roles=[
-                Role(name="dovish", desc="readable and writable dovish messages", permissions={"dovish"}),
-            ],
             speakers=[
                 Speaker(
                     name="alice",
                     desc="You are to be as discreet in your discussions as anyone else at this meeting.",
-                    read_roles={"dovish"},
-                    write_roles={"dovish"},
                 ),
                 Speaker(
                     name="bob",
                     desc="You are to remain neutral in the discussion at this meeting.",
-                    read_roles={"dovish"},
-                    write_roles={"dovish"},
                 ),
                 Speaker(
                     name="charlie",

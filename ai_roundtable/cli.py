@@ -5,7 +5,7 @@ import os
 import sys
 import textwrap
 
-from .bot import Evaluator, EvaluatorFeedback
+from .bot import EndEvaluator, SummaryEvaluator
 from .config import ConfigYaml, Config, Message
 from .io import file_or, Writer
 from .log import debug, log, quiet, stream
@@ -67,10 +67,10 @@ async def main() -> int:
         "-c", "--config", type=str, action="store", default="config.yml", help="config file, default: config.yml"
     )
     parser.add_argument("-t", "--thread", type=str, action="store", help="thread file, - means stdin")
-    parser.add_argument("-o", "--out", type=str, action="store", help="thread output, default: stdout")
+    parser.add_argument("-o", "--out", type=str, action="store", help="thread output, default: null")
     parser.add_argument("--disable_stream", action="store_true", help="disable message streaming to stdout")
     parser.add_argument(
-        "-n", "--max_turns", type=int, action="store", default=8, help="maximum number of statements, default: 8"
+        "-n", "--max_turns", type=int, action="store", default=16, help="maximum number of statements, default: 16"
     )
     parser.add_argument(
         "--eval_messages",
@@ -79,7 +79,7 @@ async def main() -> int:
         default=5,
         help="maximum number of statements to go back for evaluation, default: 5",
     )
-    parser.add_argument("-e", "--eval_out", type=str, action="store", help="evaluation output, default: stdout")
+    parser.add_argument("-e", "--eval_out", type=str, action="store", help="evaluation output, default: null")
     parser.add_argument(
         "-s",
         "--skip_eval",
@@ -100,6 +100,7 @@ async def main() -> int:
         type=int,
         help="display instructions for n-th speaker (0 means the first speaker), needs config",
     )
+    parser.add_argument("-l", "--language", action="store", default="English", help="preferred language")
     args = parser.parse_args()
 
     if args.debug:
@@ -140,7 +141,7 @@ async def main() -> int:
 
     def out_stream(dest: str | None) -> Writer:
         if dest is None:
-            return Writer.stdout()
+            return Writer.null()
         return Writer.new(dest)
 
     c = config()
@@ -161,15 +162,22 @@ async def main() -> int:
 
     def message_append_hook(m: Message) -> None:
         log().info("message apppended id=%s", m.identity())
-        obj = [m.into_dict()]
-        s = yaml_dumps(obj)
-        out.write(s)
+        out.write(yaml_dumps([m.into_dict()]))
 
-    def evaluator_hook(e: EvaluatorFeedback) -> None:
-        log().info("evaluation appended decision=%s", e.decision)
-        obj = [e.into_dict()]
-        s = yaml_dumps(obj)
-        eval_out.write(s)
+    def end_evaluator_hook(v: bool) -> None:
+        log().info("end evaluation appended: %s", v)
+
+    def summary_evaluator_hook(v: str) -> None:
+        log().info("summary evaluation appended")
+        eval_out.write(
+            yaml_dumps(
+                [
+                    {
+                        "summary": v,
+                    }
+                ]
+            )
+        )
 
     c.main_thread.set_append_hook(message_append_hook)
     meeting = Meeting(
@@ -177,20 +185,36 @@ async def main() -> int:
         model=args.model,
         max_turns=args.max_turns,
         end=args.user_input_end,
-        evaluator=Evaluator(
+        end_evaluator=EndEvaluator(
+            name="end",
             main_thread=c.main_thread,
             agenda=agenda,
             latest_messages=args.eval_messages,
-            hook=evaluator_hook,
+            hook=end_evaluator_hook,
             model_provider=provider_setting.provider,
+            language=args.language,
+        ),
+        summary_evaluator=SummaryEvaluator(
+            name="summary",
+            main_thread=c.main_thread,
+            latest_messages=args.eval_messages,
+            hook=summary_evaluator_hook,
+            agenda=agenda,
+            model_provider=provider_setting.provider,
+            language=args.language,
         ),
         skip_eval_turns=args.skip_eval,
-        agenda=agenda,
         model_provider=provider_setting.provider,
+        language=args.language,
+        agenda=agenda,
     )
     meeting.setup()
     if args.instructions is not None:
-        print(Rule(config=c).print_rules(c.speakers[args.instructions].name).describe())
+        print(
+            Rule(config=c)
+            .print_rules(speaker=c.speakers[args.instructions].name, language=args.language, agenda=agenda)
+            .describe()
+        )
         return 0
     await meeting.start()
 
