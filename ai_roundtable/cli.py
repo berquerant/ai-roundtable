@@ -164,15 +164,11 @@ async def main() -> int:
 
     def summary_evaluator_hook(v: str) -> None:
         log().info("summary evaluation appended")
-        eval_out.write(
-            yaml_dumps(
-                [
-                    {
-                        "summary": v,
-                    }
-                ]
-            )
-        )
+        eval_out.write(yaml_dumps([{"summary": v}]))
+
+    def raw_evaluator_hook(name: str, v: str) -> None:
+        log().info("%s evaluation appended", name)
+        eval_out.write(yaml_dumps([{name: v}]))
 
     c.main_thread.set_append_hook(message_append_hook)
     meeting = Meeting(
@@ -182,6 +178,7 @@ async def main() -> int:
         end=args.user_input_end,
         end_evaluator_hook=end_evaluator_hook,
         summary_evaluator_hook=summary_evaluator_hook,
+        raw_evaluator_hook=raw_evaluator_hook,
         skip_eval_turns=args.skip_eval,
         language=args.language,
         agenda=agenda,

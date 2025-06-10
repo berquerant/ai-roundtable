@@ -130,12 +130,22 @@ class Config(IntoDict, FromDict):
             lambda x: x.name == "summary",
         ) or Speaker(name="summary")
 
+    @property
+    def raw_evaluators(self) -> list[Speaker]:
+        return [x for x in self.system if x.name not in {"end", "summary"}]
+
     def setup(self) -> None:
         self.validate()
 
     def validate(self) -> None:
         self.speaker_dict
         self.__validate_main_thread()
+        self.__validate_raw_evaluator()
+
+    def __validate_raw_evaluator(self) -> None:
+        for x in self.raw_evaluators:
+            if not x.desc:
+                raise Exception(f"evaluator {x.name} has no desc")
 
     def __validate_main_thread(self) -> None:
         for x in self.main_thread.messages:

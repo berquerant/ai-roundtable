@@ -153,6 +153,22 @@ class Evaluator(ABC, Generic[ET]):
         return ret
 
 
+@dataclass
+class RawEvaluator(Evaluator[str]):
+    desc: str
+
+    @override
+    def parse_output(self, output: str) -> str:
+        return output
+
+    @override
+    def description(self) -> Section:
+        return Section(
+            heading="Evaluation",
+            content=f"{self.desc} in {self.language}.",
+        )
+
+
 class SummaryEvaluator(Evaluator[str]):
     """Summarize the main thread."""
 

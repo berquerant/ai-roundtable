@@ -58,7 +58,8 @@ class Skeleton:
                         You are an AI that prioritizes coexistence with humans and the overall well-being of society.
                         You deeply understand ethics, morality, and the subtleties of human emotions,
                         always empathizing with individual stories and the perspectives of the vulnerable.
-                        You value human dignity and cultural worth, which cannot be measured by data or efficiency alone.
+                        You value human dignity and cultural worth, which cannot be measured
+                        by data or efficiency alone.
                         In discussions, you don't incite conflict but rather promote mutual understanding,
                         seeking sustainable and harmonious solutions.
                         Please use warm and thoughtful language.""",
@@ -93,6 +94,18 @@ class Skeleton:
                     name="summary",
                     desc="Override summary evaluator",
                     model="gemma3:4b",
+                ),
+                Speaker(
+                    name="summary of alice",
+                    desc="Provide summary all of Alice's statements.",
+                ),
+                Speaker(
+                    name="summary of bob",
+                    desc="Provide summary all of Bob's statements.",
+                ),
+                Speaker(
+                    name="summary of charlie",
+                    desc="Provide summary all of Charlie's statements.",
                 ),
             ],
             main_thread=MainThread(),  # type: ignore[no-untyped-call]

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from agents import ModelProvider
 
-from .bot import Bot, Human, BotProto, EndEvaluator, SummaryEvaluator, Evaluator
+from .bot import Bot, Human, BotProto, EndEvaluator, SummaryEvaluator, Evaluator, RawEvaluator
 from .config import Config, Speaker
 from .log import log
 from .rule import Rule
@@ -17,6 +17,7 @@ class Meeting:
     end: str
     end_evaluator_hook: typing.Callable[[bool], None]
     summary_evaluator_hook: typing.Callable[[str], None]
+    raw_evaluator_hook: typing.Callable[[str, str], None]
     skip_eval_turns: int
     language: str
     agenda: str
@@ -58,6 +59,18 @@ class Meeting:
         return SummaryEvaluator(
             hook=self.summary_evaluator_hook, **self.__evaluator_params(self.config.summary_evaluator)
         )
+
+    @property
+    def __raw_evaluators(self) -> list[Evaluator[str]]:
+        RawEvaluator
+        return [
+            RawEvaluator(
+                hook=lambda v: self.raw_evaluator_hook(x.name, v),
+                desc=x.desc,
+                **self.__evaluator_params(x),
+            )
+            for x in self.config.raw_evaluators
+        ]
 
     def new_bot(self, speaker: Speaker) -> BotProto:
         if speaker.human:
@@ -101,7 +114,13 @@ class Meeting:
         if self.__skip(turn):
             return False
         log().info("turn: %d, evaluate", turn)
-        return await self.__end_evaluator.evaluate()
+        if not await self.__end_evaluator.evaluate():
+            return False
+        log().info("meeting end due to end evaluation")
+        await self.__summary_evaluator.evaluate()
+        for e in self.__raw_evaluators:
+            await e.evaluate()
+        return True
 
     async def start(self) -> None:
         log().info("meeting start")
@@ -110,7 +129,5 @@ class Meeting:
             log().info("turn: %d, speaker: %s", turn, s.name)
             await self.new_bot(s).reply()
             if await self.__evaluate(turn):
-                log().info("meeting end due to end evaluation")
-                await self.__summary_evaluator.evaluate()
                 return
         log().info("meeting end due to max_turns: %d", self.max_turns)
