@@ -1,3 +1,4 @@
+import textwrap
 import typing
 from dataclasses import dataclass
 
@@ -39,25 +40,53 @@ class Meeting:
             api_key_env=self.api_key_env,
         )
 
-    def __evaluator_params(self, speaker: Speaker) -> dict[str, typing.Any]:
+    def __evaluator_params(self, speaker: Speaker, desc: str) -> dict[str, typing.Any]:
         log().info("evaluator[%s]: %s", speaker.name, speaker.model_or(self.model))
         return {
             "name": speaker.name,
             "main_thread": self.config.main_thread,
             "agenda": self.agenda,
             "latest_messages": self.latest_messages,
-            "language": self.language,
             "model_provider": self.__provider(speaker),
+            "desc": speaker.desc or desc,
         }
 
     @property
     def __end_evaluator(self) -> Evaluator[bool]:
-        return EndEvaluator(hook=self.end_evaluator_hook, **self.__evaluator_params(self.config.end_evaluator))
+        return EndEvaluator(
+            hook=self.end_evaluator_hook,
+            heading="When to Stop Discussing",
+            **self.__evaluator_params(
+                self.config.end_evaluator,
+                desc=textwrap.dedent(
+                    """\
+                    You carefully evaluate the content of the discussion and
+                    decide whether you should continue or end the discussion.
+                    For example, you should end the discussion in the following situations:
+
+                    - The agenda item has been fully discussed and a conclusion has been reached
+                    - No conclusion can be reached by continuing the discussion.
+                    - Similar opinions are being repeated.
+
+                    When deciding whether to continue or end the discussion,
+                    only reply "yes" to end the discussion, or "no" if not.
+                    The agenda item is {agenda}.""",
+                ).format(agenda=self.agenda),
+            ),
+        )
 
     @property
     def __summary_evaluator(self) -> Evaluator[str]:
         return SummaryEvaluator(
-            hook=self.summary_evaluator_hook, **self.__evaluator_params(self.config.summary_evaluator)
+            hook=self.summary_evaluator_hook,
+            heading="Summary",
+            **self.__evaluator_params(
+                self.config.summary_evaluator,
+                desc=textwrap.dedent(
+                    """\
+                    Provide summary of input text concisely and comprehensively in {language}.""",
+                ).format(language=self.language),
+            ),
         )
 
     @property
@@ -66,8 +95,8 @@ class Meeting:
         return [
             RawEvaluator(
                 hook=lambda v: self.raw_evaluator_hook(x.name, v),
-                desc=x.desc,
-                **self.__evaluator_params(x),
+                heading="Evaluation",
+                **self.__evaluator_params(x, x.desc),
             )
             for x in self.config.raw_evaluators
         ]

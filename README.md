@@ -2,16 +2,17 @@
 
 ``` shell
 ❯ python -m ai_roundtable.cli -h
-usage: cli.py [-h] [-a AGENDA] [-m MODEL] [-u BASE_URL] [-c CONFIG] [-t THREAD] [-o OUT] [--disable_stream] [-n MAX_TURNS] [-p EVAL_MESSAGES]
-              [-e EVAL_OUT] [-s SKIP_EVAL] [--user_input_end USER_INPUT_END] [--debug] [--quiet] [--skeleton {minimal,dual,full}]
-              [--instructions INSTRUCTIONS] [-l LANGUAGE] [--api_key_env API_KEY_ENV]
+usage: cli.py [-h] [-a AGENDA] [-m MODEL] [-u BASE_URL] [-c CONFIG] [-t THREAD] [-o OUT] [--disable_stream]
+              [-n MAX_TURNS] [-p EVAL_MESSAGES] [-e EVAL_OUT] [-s SKIP_EVAL] [--user_input_end USER_INPUT_END]
+              [--debug] [--quiet] [--skeleton {minimal,dual,full}] [--instructions INSTRUCTIONS] [-l LANGUAGE]
+              [--api_key_env API_KEY_ENV]
 
 Discuss with multiple AIs
 
 options:
   -h, --help            show this help message and exit
-  -a, --agenda AGENDA   first message to give to AI, agenda. @file_name to specify a file. @- to read from stdin. if not specified and thread file
-                        exists, the first statement should be agenda
+  -a, --agenda AGENDA   first message to give to AI, agenda. @file_name to specify a file. @- to read from stdin. if
+                        not specified and thread file exists, the first statement should be agenda
   -m, --model MODEL     AI model, default: gemma3
   -u, --base_url BASE_URL
                         base url of API
@@ -50,4 +51,9 @@ python -m ai_roundtable.cli -c dual.yml -t thread.yml
 # custom model provider
 python -m ai_roundtable.cli -c dual.yml -a "Can AI be a friend to humans?" \
   -u "http://localhost:11434/v1" -m "gemma3"
+
+A speaker that system.name is "end" overrides the end evaluator that \
+dicides whther to continue the discussion.
+A speaker that system.name is "summary" override the summary evaluator that \
+provides the summary of the discussion.
 ```

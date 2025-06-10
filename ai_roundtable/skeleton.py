@@ -87,13 +87,12 @@ class Skeleton:
             system=[
                 Speaker(
                     name="end",
-                    desc="Override end evaluator",
                     model="gemma3:1b",
                 ),
                 Speaker(
                     name="summary",
-                    desc="Override summary evaluator",
                     model="gemma3:4b",
+                    desc="Provides summary of the discussion in Japanese",
                 ),
                 Speaker(
                     name="summary of alice",

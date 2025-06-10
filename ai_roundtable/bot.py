@@ -1,4 +1,3 @@
-import textwrap
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Protocol, Callable, cast, TypeVar, Generic, override
@@ -119,13 +118,17 @@ class Evaluator(ABC, Generic[ET]):
     model_provider: ModelProvider
     hook: Callable[[ET], None]
     agenda: str
-    language: str
+    heading: str
+    desc: str
 
     @abstractmethod
     def parse_output(self, output: str) -> ET: ...
 
-    @abstractmethod
-    def description(self) -> Section: ...
+    def description(self) -> str:
+        return Section(
+            heading=self.heading,
+            content=self.desc,
+        ).describe()
 
     @property
     def __messages(self) -> list[Message]:
@@ -135,7 +138,7 @@ class Evaluator(ABC, Generic[ET]):
         log().info("evaluator[%s]: begin", self.name)
         agent = Agent(
             name=f"evaluator[{self.name}]",
-            instructions=self.description().describe(),
+            instructions=self.description(),
         )
         messages = self.__messages
         for i, x in enumerate(messages):
@@ -153,20 +156,10 @@ class Evaluator(ABC, Generic[ET]):
         return ret
 
 
-@dataclass
 class RawEvaluator(Evaluator[str]):
-    desc: str
-
     @override
     def parse_output(self, output: str) -> str:
         return output
-
-    @override
-    def description(self) -> Section:
-        return Section(
-            heading="Evaluation",
-            content=f"{self.desc} in {self.language}.",
-        )
 
 
 class SummaryEvaluator(Evaluator[str]):
@@ -176,16 +169,6 @@ class SummaryEvaluator(Evaluator[str]):
     def parse_output(self, output: str) -> str:
         return output
 
-    @override
-    def description(self) -> Section:
-        return Section(
-            heading="Summary",
-            content=textwrap.dedent(
-                """\
-                Provide summary of input text concisely and comprehensively in {language}.""",
-            ).format(language=self.language),
-        )
-
 
 class EndEvaluator(Evaluator[bool]):
     """Evaluate the main thread."""
@@ -193,23 +176,3 @@ class EndEvaluator(Evaluator[bool]):
     @override
     def parse_output(self, output: str) -> bool:
         return "yes" in output
-
-    @override
-    def description(self) -> Section:
-        return Section(
-            heading="When to Stop Discussing",
-            content=textwrap.dedent(
-                """\
-                You carefully evaluate the content of the discussion and
-                decide whether you should continue or end the discussion.
-                For example, you should end the discussion in the following situations:
-
-                - The agenda item has been fully discussed and a conclusion has been reached
-                - No conclusion can be reached by continuing the discussion.
-                - Similar opinions are being repeated.
-
-                When deciding whether to continue or end the discussion,
-                only reply "yes" to end the discussion, or "no" if not.
-                The agenda item is {agenda}.""",
-            ).format(agenda=self.agenda),
-        )

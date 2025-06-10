@@ -31,6 +31,11 @@ async def main() -> int:
             # custom model provider
             python -m ai_roundtable.cli -c dual.yml -a "Can AI be a friend to humans?" \\
               -u "http://localhost:11434/v1" -m "gemma3"
+
+            A speaker that system.name is "end" overrides the end evaluator that \\
+            dicides whther to continue the discussion.
+            A speaker that system.name is "summary" override the summary evaluator that \\
+            provides the summary of the discussion.
         """
         ),
     )
