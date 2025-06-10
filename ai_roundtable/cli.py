@@ -5,12 +5,10 @@ import os
 import sys
 import textwrap
 
-from .bot import EndEvaluator, SummaryEvaluator
 from .config import ConfigYaml, Config, Message
 from .io import file_or, Writer
 from .log import debug, log, quiet, stream
 from .mtg import Meeting
-from .provider import Setting
 from .rule import Rule
 from .skeleton import Skeleton
 from .yamlx import dumps as yaml_dumps
@@ -33,10 +31,6 @@ async def main() -> int:
             # custom model provider
             python -m ai_roundtable.cli -c dual.yml -a "Can AI be a friend to humans?" \\
               -u "http://localhost:11434/v1" -m "gemma3"
-
-            Environment variables:
-              OPENAI_API_KEY
-                required, API key from OpenAI project
         """
         ),
     )
@@ -53,14 +47,13 @@ async def main() -> int:
             if not specified and thread file exists, the first statement should be agenda"""
         ),
     )
-    parser.add_argument(
-        "-m", "--model", type=str, action="store", default="gpt-4o-mini", help="AI model, default: gpt-4o-mini"
-    )
+    parser.add_argument("-m", "--model", type=str, action="store", default="gemma3", help="AI model, default: gemma3")
     parser.add_argument(
         "-u",
         "--base_url",
         type=str,
         action="store",
+        default="",
         help="base url of API",
     )
     parser.add_argument(
@@ -73,6 +66,7 @@ async def main() -> int:
         "-n", "--max_turns", type=int, action="store", default=16, help="maximum number of statements, default: 16"
     )
     parser.add_argument(
+        "-p",
         "--eval_messages",
         type=int,
         action="store",
@@ -101,6 +95,9 @@ async def main() -> int:
         help="display instructions for n-th speaker (0 means the first speaker), needs config",
     )
     parser.add_argument("-l", "--language", action="store", default="English", help="preferred language")
+    parser.add_argument(
+        "--api_key_env", action="store", type=str, default="", help="Name of environment variable of API key"
+    )
     args = parser.parse_args()
 
     if args.debug:
@@ -121,8 +118,6 @@ async def main() -> int:
             case "full":
                 print(Skeleton.full())
         return 0
-
-    provider_setting = Setting(model_name=args.model, base_url=args.base_url, api_key=os.getenv("OPENAI_API_KEY") or "")
 
     def config() -> Config:
         with open(args.config) as f:
@@ -185,28 +180,14 @@ async def main() -> int:
         model=args.model,
         max_turns=args.max_turns,
         end=args.user_input_end,
-        end_evaluator=EndEvaluator(
-            name="end",
-            main_thread=c.main_thread,
-            agenda=agenda,
-            latest_messages=args.eval_messages,
-            hook=end_evaluator_hook,
-            model_provider=provider_setting.provider,
-            language=args.language,
-        ),
-        summary_evaluator=SummaryEvaluator(
-            name="summary",
-            main_thread=c.main_thread,
-            latest_messages=args.eval_messages,
-            hook=summary_evaluator_hook,
-            agenda=agenda,
-            model_provider=provider_setting.provider,
-            language=args.language,
-        ),
+        end_evaluator_hook=end_evaluator_hook,
+        summary_evaluator_hook=summary_evaluator_hook,
         skip_eval_turns=args.skip_eval,
-        model_provider=provider_setting.provider,
         language=args.language,
         agenda=agenda,
+        latest_messages=args.eval_messages,
+        base_url=args.base_url,
+        api_key_env=args.api_key_env,
     )
     meeting.setup()
     if args.instructions is not None:

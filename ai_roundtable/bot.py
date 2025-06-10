@@ -53,7 +53,6 @@ async def streaming(result: RunResultStreaming) -> None:
 class Bot:
     """Chat bot."""
 
-    model: str
     instructions: str
     main_thread: MainThread
     speaker: Speaker

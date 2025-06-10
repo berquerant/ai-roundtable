@@ -1,10 +1,14 @@
 import hashlib
+import os
 from dataclasses import dataclass
 from typing import Callable, cast
 
 import yaml
+from agents import ModelProvider
 
 from .data import meta, IntoDict, FromDict, IdentityDict, Validator, Desc
+from .provider import Setting as ProviderSetting
+from .slice import find
 from .yamlx import dumps as yaml_dumps
 
 
@@ -67,11 +71,26 @@ class Speaker(Validator, IntoDict, FromDict):
     """Speaker definition."""
 
     name: str = meta(desc="speaker name", validator=Validator.length()).field(str)
-    desc: str = meta(desc="speaker description", validator=Validator.length()).field(str)
+    desc: str = meta(desc="speaker description").field(str, default="")
     human: bool = meta(desc="if true, human").field(bool, default=False)
+    model: str = meta(desc="speaker model").field(str, default="")
+    base_url: str = meta(desc="base url of API").field(str, default="")
+    api_key_env: str = meta(desc="name of envvar of API key").field(str, default="")
 
     def identity(self) -> str:
         return self.name
+
+    def model_or(self, model: str) -> str:
+        if self.model != "":
+            return self.model
+        return model
+
+    def provider(self, model: str = "", base_url: str = "", api_key_env: str = "") -> ModelProvider:
+        return ProviderSetting(
+            model_name=self.model_or(model),
+            base_url=self.base_url or base_url,
+            api_key=os.getenv(self.api_key_env or api_key_env) or "",
+        ).provider
 
 
 SpeakerDict = IdentityDict[Speaker]
@@ -95,6 +114,21 @@ class Config(IntoDict, FromDict):
 
     main_thread: MainThread = meta(desc="main thread").field(MainThread)
     speakers: list[Speaker] = meta(desc="speaker definitions").field(list[Speaker], default_factory=list)
+    system: list[Speaker] = meta(desc="system definitions").field(list[Speaker], default_factory=list)
+
+    @property
+    def end_evaluator(self) -> Speaker:
+        return find(
+            self.system,
+            lambda x: x.name == "end",
+        ) or Speaker(name="end")
+
+    @property
+    def summary_evaluator(self) -> Speaker:
+        return find(
+            self.system,
+            lambda x: x.name == "summary",
+        ) or Speaker(name="summary")
 
     def setup(self) -> None:
         self.validate()
