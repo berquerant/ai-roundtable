@@ -1,15 +1,22 @@
 .PHONY: init
 init:
-	@pipenv install --dev
+	@uv sync
 
 .PHONY: ci
 ci:
-	@pipenv run ci
+	@uvx tox run-parallel -m ci --parallel-no-spinner --parallel-live
 
-.PHONY: vuln
-vuln:
-	@pipenv check
+.PHONY: dev
+dev:
+	pip install --editable .
 
+.PHONY: install
+install:
+	pip install .
+
+.PHONY: dist
+dist:
+	uv run python setup.py sdist
 
 .PHONY: clean
 clean:
