@@ -21,7 +21,7 @@ def run(cmd: str | list[str], dir: Path, *args, **kwargs) -> subprocess.Complete
 
 def test_e2e():
     pwd = Path.cwd()
-    run(["pipenv", "run", "dist"], pwd)
+    run(["python", "setup.py", "sdist"], pwd)
     run(
         [
             "pip",
