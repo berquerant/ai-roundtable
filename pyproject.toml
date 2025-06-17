@@ -103,3 +103,42 @@ pretty = true
 
 [tool.black]
 line-length = 120
+
+[tool.tox]
+requires = ["tox>=4"]
+env_list = [
+  "black",
+  "ruff",
+  "mypy",
+  "py313",
+]
+skipsdist = true
+skip_missing_interpreters = true
+
+[tool.tox.env_run_base]
+labels = ["test","ci"]
+deps = ["uv"]
+commands = [[
+  "uv", "run", "pytest", "--basetemp={envtmpdir}", "-s", "-v", "--ff", "--doctest-modules", "tests", "ai_roundtable",
+]]
+
+[tool.tox.env.black]
+labels = ["check","ci"]
+deps = ["uv"]
+commands = [[
+  "uv", "run", "black", "--check", "--diff", "--color", "tests", "ai_roundtable",
+]]
+
+[tool.tox.env.mypy]
+labels = ["check","ci"]
+deps = ["uv"]
+commands = [[
+  "uv", "run", "mypy", "--strict", "ai_roundtable",
+]]
+
+[tool.tox.env.ruff]
+labels = ["check","ci"]
+deps = ["uv"]
+commands = [[
+  "uv", "run", "ruff", "check", "tests", "ai_roundtable",
+]]
