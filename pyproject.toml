@@ -12,7 +12,7 @@ classifiers = [
 ]
 dependencies = [
     "pyyaml==6.0.3",
-    "openai-agents==0.2.11",
+    "openai-agents==0.4.0",
 ]
 
 [project.urls]
